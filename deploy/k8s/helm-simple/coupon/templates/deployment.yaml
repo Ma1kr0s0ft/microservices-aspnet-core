@@ -1,5 +1,5 @@
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: coupon
   labels:
@@ -15,11 +15,13 @@ spec:
       labels:
         app: eshop
         service: coupon
+      annotations:
+        linkerd.io/inject: enabled
     spec:
       containers:
         - name: coupon-api
           image: {{ .Values.registry }}/coupon.api:linux-latest
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
             - containerPort: 80
               protocol: TCP

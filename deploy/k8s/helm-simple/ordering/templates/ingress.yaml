@@ -1,5 +1,5 @@
-kind: Ingress
 apiVersion: extensions/v1beta1
+kind: Ingress
 metadata:
   name: ordering
   labels:
@@ -9,9 +9,14 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-    - http:
-        paths:
-        - path: /ordering-api
-          backend: 
-            serviceName: ordering-api
-            servicePort: 80
+{{- if .Values.useHostName }}
+  - host: {{ .Values.host }}
+    http:
+{{- else }}
+  - http:
+{{- end }}
+      paths:
+      - path: /ordering-api
+        backend:
+          serviceName: ordering-api
+          servicePort: 80

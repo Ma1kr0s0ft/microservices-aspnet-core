@@ -1,5 +1,5 @@
-kind: Deployment
 apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: payment
   labels:
@@ -19,7 +19,7 @@ spec:
       containers:
         - name: payment-api
           image: {{ .Values.registry }}/payment.api:linux-latest
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
           ports:
             - name: http
               containerPort: 80

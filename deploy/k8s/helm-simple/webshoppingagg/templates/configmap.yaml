@@ -1,5 +1,5 @@
-kind: ConfigMap
 apiVersion: v1
+kind: ConfigMap
 metadata:
   name: webshoppingagg-cm
   labels:
@@ -7,10 +7,11 @@ metadata:
     service: webshoppingagg
 data:
   ASPNETCORE_ENVIRONMENT: Development
+  ASPNETCORE_URLS: http://0.0.0.0:80
   BasketUrlHC: http://basket-api/hc
   CatalogUrlHC: http://catalog-api/hc
   CouponUrlHC: http://coupon-api/hc
-  IdentityUrlExternal: http://{{ .Values.aksLB }}/identity
+  IdentityUrlExternal: {{ .Values.protocol }}://{{ .Values.host }}/identity
   IdentityUrlHC: http://identity-api/hc
   OrderingUrlHC: http://ordering-api/hc
   PATH_BASE: /webshoppingagg

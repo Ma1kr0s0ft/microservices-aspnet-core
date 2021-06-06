@@ -11,16 +11,17 @@ then
   eval $(cat ~/clouddrive/aspnet-learn/create-aks-exports.txt)
 fi
 
-eshopSubs=${ESHOP_SUBS}
+if [ -f ~/clouddrive/aspnet-learn/create-idtag-exports.txt ]
+then
+  eval $(cat ~/clouddrive/aspnet-learn/create-idtag-exports.txt)
+fi
+
 eshopRg=${ESHOP_RG}
 eshopLocation=${ESHOP_LOCATION}
 eshopIdTag=${ESHOP_IDTAG}
 
 while [ "$1" != "" ]; do
     case $1 in
-        -s | --subscription)            shift
-                                        eshopSubs=$1
-                                        ;;
         -g | --resource-group)          shift
                                         eshopRg=$1
                                         ;;
@@ -39,18 +40,6 @@ then
     exit 1
 fi
 
-if [ ! -z "$eshopSubs" ]
-then
-    echo "Switching to subscription $eshopSubs..."
-    az account set -s $eshopSubs
-fi
-
-if [ ! $? -eq 0 ]
-then
-    echo "${newline}${errorStyle}ERROR: Can't switch to subscription $eshopSubs.${defaultTextStyle}${newline}"
-    exit 1
-fi
-
 rg=`az group show -g $eshopRg -o json`
 
 if [ -z "$rg" ]
@@ -60,7 +49,7 @@ then
         echo "${newline}${errorStyle}ERROR: If resource group has to be created, location is mandatory. Use -l to set it.${defaultTextStyle}${newline}"
         exit 1
     fi
-    echo "Creating RG $eshopRg in location $eshopLocation..."
+    echo "Creating resource group \"$eshopRg\" in location \"$eshopLocation\"..."
     az group create -n $eshopRg -l $eshopLocation
     if [ ! $? -eq 0 ]
     then
@@ -68,7 +57,7 @@ then
         exit 1
     fi
 
-    echo "Created RG \"$eshopRg\" in location \"$eshopLocation\"."
+    echo "Created resource group \"$eshopRg\" in location \"$eshopLocation\"."
 
 else
     if [ -z "$eshopLocation" ]
@@ -93,7 +82,7 @@ then
     fi
 
     echo
-    echo "Creating Azure Container Registry eshoplearn$eshopIdTag in resource group $eshopRg..."
+    echo "Creating Azure Container Registry \"eshoplearn$eshopIdTag\" in resource group \"$eshopRg\"..."
     acrCommand="az acr create --name eshoplearn$eshopIdTag -g $eshopRg -l $eshopLocation -o json --sku basic --admin-enabled --query \"name\" -otsv"
     echo "${newline} > ${azCliCommandStyle}$acrCommand${defaultTextStyle}${newline}"
     eshopAcrName=`$acrCommand`
@@ -104,7 +93,7 @@ then
         exit 1
     fi
 
-    echo ACR created!
+    echo ACR instance created!
     echo
 fi
 
@@ -121,26 +110,33 @@ eshopAcrUser=`echo "$eshopAcrCredentials" | head -1`
 eshopAcrPassword=`echo "$eshopAcrCredentials" | tail -1`
 
 # Grant permisions to AKS if created
-eshopAks=`az aks show -n eshop-learn-aks -g $eshopRg`
+aksIdentityObjectId=$(az aks show -g $eshopRg -n $ESHOP_AKSNAME --query identityProfile.kubeletidentity.objectId -otsv)
 
-if [ ! -z "$eshopAks" ]
+if [ ! -z "$aksIdentityObjectId" ]
 then
-    echo "Attaching ACR to AKS..."
-    attachCmd="az aks update -n eshop-learn-aks -g $eshopRg --attach-acr $eshopAcrName --output none" 
-    echo "${newline} > ${azCliCommandStyle}$attachCmd${defaultTextStyle}${newline}"
-    eval $attachCmd
+    acrResourceId=$(az acr show -n $eshopAcrName -g $eshopRg --query id -o tsv)
+
+    az role assignment create \
+        --role AcrPull \
+        --assignee-object-id $aksIdentityObjectId \
+        --scope $acrResourceId \
+        --output none
 fi
 
-echo export ESHOP_SUBS=$eshopSubs > create-acr-exports.txt
 echo export ESHOP_RG=$eshopRg >> create-acr-exports.txt
 echo export ESHOP_LOCATION=$eshopLocation >> create-acr-exports.txt
+echo export ESHOP_AKSNAME=$ESHOP_AKSNAME >> create-acr-exports.txt
+echo export ESHOP_LBIP=$ESHOP_LBIP >> create-acr-exports.txt
 echo export ESHOP_ACRNAME=$eshopAcrName >> create-acr-exports.txt
 echo export ESHOP_REGISTRY=$eshopRegistry >> create-acr-exports.txt
 echo export ESHOP_ACRUSER=$eshopAcrUser >> create-acr-exports.txt
 echo export ESHOP_ACRPASSWORD=$eshopAcrPassword >> create-acr-exports.txt
 echo export ESHOP_IDTAG=$eshopIdTag >> create-acr-exports.txt
 
+echo export ESHOP_IDTAG=$eshopIdTag >> create-idtag-exports.txt
+
 echo 
 echo "Created Azure Container Registry \"$eshopAcrName\" in resource group \"$eshopRg\" in location \"$eshopLocation\"." 
 
 mv -f create-acr-exports.txt ~/clouddrive/aspnet-learn/
+mv -f create-idtag-exports.txt ~/clouddrive/aspnet-learn/

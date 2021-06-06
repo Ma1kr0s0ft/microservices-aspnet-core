@@ -1,5 +1,5 @@
-kind: Ingress
 apiVersion: extensions/v1beta1
+kind: Ingress
 metadata:
   name: webstatus
   labels:
@@ -9,9 +9,14 @@ metadata:
     kubernetes.io/ingress.class: "nginx"
 spec:
   rules:
-    - http:
-        paths:
-        - path: /webstatus
-          backend: 
-            serviceName: webstatus
-            servicePort: 80
+{{- if .Values.useHostName }}
+  - host: {{ .Values.host }}
+    http:
+{{- else }}
+  - http:
+{{- end }}
+      paths:
+      - path: /webstatus
+        backend:
+          serviceName: webstatus
+          servicePort: 80

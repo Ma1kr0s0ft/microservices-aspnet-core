@@ -1,5 +1,5 @@
-kind: Ingress
 apiVersion: extensions/v1beta1
+kind: Ingress
 metadata:
   name: webspa
   labels:
@@ -8,10 +8,21 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "nginx"
 spec:
+{{- if eq .Values.protocol "https" }}
+  tls:
+    - hosts:
+      - {{ .Values.host }}
+      secretName: tls-secret
+{{- end }}
   rules:
-    - http:
-        paths:
-        - path: /
-          backend: 
-            serviceName: webspa
-            servicePort: 80
+{{- if .Values.useHostName }}
+  - host: {{ .Values.host }}
+    http:
+{{- else }}
+  - http:
+{{- end }}
+      paths:
+      - path: /
+        backend:
+          serviceName: webspa
+          servicePort: 80
